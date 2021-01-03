@@ -1,7 +1,10 @@
 const delay = require('delay');
 const _ = require('lodash');
 
-const { GoogleSpreadsheet, GoogleSpreadsheetWorksheet } = require('../index.js');
+const {
+  GoogleSpreadsheet,
+  GoogleSpreadsheetWorksheet,
+} = require('../index.js');
 
 const docs = require('./load-test-docs')();
 const creds = require('./service-account-creds.json');
@@ -45,13 +48,17 @@ describe('Managing doc info and sheets', () => {
     });
 
     it('throws an error if updating title directly', async () => {
-      expect(() => { doc.title = 'new title'; }).toThrow();
+      expect(() => {
+        doc.title = 'new title';
+      }).toThrow();
     });
 
     it('can update the title using updateProperties', async () => {
       const oldTitle = doc.title;
       const newTitle = `${doc.title} updated @ ${+new Date()}`;
-      await doc.updateProperties({ title: newTitle });
+      await doc.updateProperties({
+        title: newTitle,
+      });
       expect(doc.title).toBe(newTitle);
 
       // make sure the update actually stuck
@@ -60,7 +67,9 @@ describe('Managing doc info and sheets', () => {
       expect(doc.title).toBe(newTitle);
 
       // set the title back
-      await doc.updateProperties({ title: oldTitle });
+      await doc.updateProperties({
+        title: oldTitle,
+      });
     });
 
     // TODO: check ability to update other properties?
@@ -115,19 +124,25 @@ describe('Managing doc info and sheets', () => {
     let sheet;
 
     beforeAll(async () => {
-      sheet = await doc.addSheet({ title: `Spécial CнArs - ${+new Date()}` });
+      sheet = await doc.addSheet({
+        title: `Spécial CнArs - ${+new Date()}`,
+      });
     });
     afterAll(async () => {
       await sheet.delete();
     });
 
     it('throws an error if updating title directly', async () => {
-      expect(() => { sheet.title = 'new title'; }).toThrow();
+      expect(() => {
+        sheet.title = 'new title';
+      }).toThrow();
     });
 
     it('can update the title using updateProperties', async () => {
       const newTitle = `${sheet.title} updated @ ${+new Date()}`;
-      await sheet.updateProperties({ title: newTitle });
+      await sheet.updateProperties({
+        title: newTitle,
+      });
       expect(sheet.title).toBe(newTitle);
 
       // make sure the update actually stuck
@@ -138,8 +153,13 @@ describe('Managing doc info and sheets', () => {
 
     it('can resize a sheet', async () => {
       // cannot update directly
-      expect(() => { sheet.rowCount = 77; }).toThrow();
-      await sheet.resize({ rowCount: 77, columnCount: 44 });
+      expect(() => {
+        sheet.rowCount = 77;
+      }).toThrow();
+      await sheet.resize({
+        rowCount: 77,
+        columnCount: 44,
+      });
       expect(sheet.rowCount).toBe(77);
       sheet.resetLocalCache();
       await doc.loadInfo();
@@ -189,6 +209,7 @@ describe('Managing doc info and sheets', () => {
         headerValues: ['copy', 'this', 'sheet'],
       });
     });
+
     afterAll(async () => {
       await sheet.delete();
     });
@@ -232,10 +253,44 @@ describe('Managing doc info and sheets', () => {
       newDoc = new GoogleSpreadsheet();
       newDoc.useServiceAccountAuth(creds);
       const newTitle = `New doc ${+new Date()}`;
-      await newDoc.createNewSpreadsheetDocument({ title: newTitle });
+      await newDoc.createNewSpreadsheetDocument({
+        title: newTitle,
+      });
       expect(newDoc.title).toEqual(newTitle);
       expect(newDoc.sheetsByIndex.length > 0).toBeTruthy();
       expect(newDoc.sheetsByIndex[0]).toBeInstanceOf(GoogleSpreadsheetWorksheet);
+    });
+  });
+
+  describe('Insert a column or row to a document', () => {
+    let sheet;
+
+    beforeAll(async () => {
+      sheet = await doc.addSheet({
+        title: `Sheet to copy ${+new Date()}`,
+        headerValues: ['a', 'b'],
+      });
+      await sheet.addRow({
+        a: 'a',
+        b: 'b',
+      });
+    });
+
+    afterAll(async () => {
+      await sheet.delete();
+    });
+
+    it('Should insert a new empty row at index', async () => {
+      await sheet.insertDimension('ROWS', {
+        startIndex: 1,
+        endIndex: 2,
+      });
+
+      // read rows
+      const rows = await sheet.getRows();
+
+      expect(rows[0].a).toEqual('');
+      expect(rows[0].b).toEqual('');
     });
   });
 });
